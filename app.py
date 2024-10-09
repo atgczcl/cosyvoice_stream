@@ -19,7 +19,7 @@ if not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml') or not 
     snapshot_download('iic/CosyVoice-300M', cache_dir='pretrained_models/CosyVoice-300M',local_dir='pretrained_models/CosyVoice-300M')
     snapshot_download('iic/CosyVoice-300M-SFT', cache_dir='pretrained_models/CosyVoice-300M-SFT',local_dir='pretrained_models/CosyVoice-300M-SFT')
 
-cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M-SFT')
+cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M')
 
 print(cosyvoice.list_avaliable_spks())
 
@@ -70,11 +70,16 @@ def stream_sft_json():
     question_data = request.get_json()
     query = question_data.get('query')
     speaker = question_data.get('speaker')
+    speed = question_data.get('speed', 1.0)
+    isStream = question_data.get('isStream', False)
+    # 显式类型转换
+    speed = float(speed)  # 确保速度为浮点数
+    isStream = isStream == 'true'  # 确保 isStream 为布尔类型
     if not query:
         return {"error": "Query parameter 'query' is required"}, 400
 
     def generate_stream():
-        for chunk in cosyvoice.strem_sft(query, speaker, True):
+        for chunk in cosyvoice.strem_sft(query, speaker, isStream, speed):
             # yield chunk.numpy().tobytes()  # Assuming chunk is a PyTorch tensor
             float_data = chunk.numpy()
             byte_data = float_data.tobytes()
