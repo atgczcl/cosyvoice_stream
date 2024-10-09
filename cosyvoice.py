@@ -20,7 +20,6 @@ from cosyvoice.cli.frontend import CosyVoiceFrontEnd
 from cosyvoice.cli.model import CosyVoiceModel
 from cosyvoice.utils.file_utils import logging
 
-
 class CosyVoice:
 
     def __init__(self, model_dir, load_jit=True, load_onnx=False):
@@ -112,7 +111,19 @@ class CosyVoice:
             yield model_output
             start_time = time.time()
 
-    def stream_clone(self, tts_text, prompt_text, prompt_speech_16k, stream=True, speed=1.0):
+
+
+    def stream000(self, tts_text, prompt_text, prompt_speech_16k):
+        prompt_text = self.frontend.text_normalize(prompt_text, split=False)
+        tts_speeches = []
+        for i in self.frontend.text_normalize(tts_text, split=True):
+            print(f"i = {i}")
+            model_input = self.frontend.frontend_zero_shot(i, prompt_text, prompt_speech_16k)
+            model_output = self.model.tts(**model_input)
+            tts_speech_chunk = model_output['tts_speech']
+            yield tts_speech_chunk
+
+    def stream(self, tts_text, prompt_text, prompt_speech_16k, stream=True, speed=1.0):
         prompt_text = self.frontend.text_normalize(prompt_text, split=False)
         for i in tqdm(self.frontend.text_normalize(tts_text, split=True)):
             model_input = self.frontend.frontend_zero_shot(i, prompt_text, prompt_speech_16k)
@@ -120,22 +131,7 @@ class CosyVoice:
             logging.info('synthesis text {}'.format(i))
             for model_output in self.model.tts(**model_input, stream=stream, speed=speed):
                 speech_len = model_output['tts_speech'].shape[1] / 22050
-                logging.info('yield speech clone len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
+                logging.info('yield speech len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
                 tts_speech_chunk = model_output['tts_speech']
                 start_time = time.time()
                 yield tts_speech_chunk
-
-    def strem_sft(self, tts_text, spk_id, stream=True, speed=1.0):
-        for i in tqdm(self.frontend.text_normalize(tts_text, split=True)):
-            model_input = self.frontend.frontend_sft(i, spk_id)
-            start_time = time.time()
-            logging.info('synthesis text {}'.format(i))
-            for model_output in self.model.tts(**model_input, stream=stream, speed=speed):
-                speech_len = model_output['tts_speech'].shape[1] / 22050
-                logging.info('yield speech sft len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
-                tts_speech_chunk = model_output['tts_speech']
-                yield tts_speech_chunk
-                # yield model_output
-                start_time = time.time()
-
-                
