@@ -1,53 +1,71 @@
 # CosyVoice
+
 ## 👉🏻 [CosyVoice Demos](https://fun-audio-llm.github.io/) 👈🏻
-[[CosyVoice Paper](https://fun-audio-llm.github.io/pdf/CosyVoice_v1.pdf)][[CosyVoice Studio](https://www.modelscope.cn/studios/iic/CosyVoice-300M)][[CosyVoice Code](https://github.com/FunAudioLLM/CosyVoice)]
+
+\[[CosyVoice Paper](https://fun-audio-llm.github.io/pdf/CosyVoice_v1.pdf)]\[[CosyVoice Studio](https://www.modelscope.cn/studios/iic/CosyVoice-300M)]\[[CosyVoice Code](https://github.com/FunAudioLLM/CosyVoice)]
 
 For `SenseVoice`, visit [SenseVoice repo](https://github.com/FunAudioLLM/SenseVoice) and [SenseVoice space](https://www.modelscope.cn/studios/iic/SenseVoice).
 
+# 修改支持：
+
+docker build构建：`docker build -t cosyvoice_stream .`
+
 ## Roadmap
 
-- [x] 2024/07
+*   [x] 2024/07
 
-    - [x] Flow matching training support
-    - [x] WeTextProcessing support when ttsfrd is not avaliable
-    - [x] Fastapi server and client
+    *   [x] Flow matching training support
 
-- [x] 2024/08
+    *   [x] WeTextProcessing support when ttsfrd is not avaliable
 
-    - [x] Repetition Aware Sampling(RAS) inference for llm stability
-    - [x] Streaming inference mode support, including kv cache and sdpa for rtf optimization
+    *   [x] Fastapi server and client
 
-- [x] 2024/09
+*   [x] 2024/08
 
-    - [x] 25hz cosyvoice base model
-    - [x] 25hz cosyvoice voice conversion model
+    *   [x] Repetition Aware Sampling(RAS) inference for llm stability
 
-- [ ] TBD
+    *   [x] Streaming inference mode support, including kv cache and sdpa for rtf optimization
 
-    - [ ] 25hz llama based llm model which supports lora finetune
-    - [ ] Support more instruction mode
-    - [ ] Voice conversion
-    - [ ] Music generation
-    - [ ] Training script sample based on Mandarin
-    - [ ] CosyVoice-500M trained with more multi-lingual data
-    - [ ] More...
+*   [x] 2024/09
+
+    *   [x] 25hz cosyvoice base model
+
+    *   [x] 25hz cosyvoice voice conversion model
+
+*   [ ] TBD
+
+    *   [ ] 25hz llama based llm model which supports lora finetune
+
+    *   [ ] Support more instruction mode
+
+    *   [ ] Voice conversion
+
+    *   [ ] Music generation
+
+    *   [ ] Training script sample based on Mandarin
+
+    *   [ ] CosyVoice-500M trained with more multi-lingual data
+
+    *   [ ] More...
 
 ## Install
 
 **Clone and install**
 
-- Clone the repo
-``` sh
+*   Clone the repo
+
+```sh
 git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
 # If you failed to clone submodule due to network failures, please run following command until success
 cd CosyVoice
 git submodule update --init --recursive
 ```
 
-- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create Conda env:
+*   Install Conda: please see <https://docs.conda.io/en/latest/miniconda.html>
 
-``` sh
+*   Create Conda env:
+
+```sh
 conda create -n cosyvoice python=3.8
 conda activate cosyvoice
 # pynini is required by WeTextProcessing, use conda to install it as it can be executed on all platform.
@@ -67,7 +85,7 @@ We strongly recommend that you download our pretrained `CosyVoice-300M` `CosyVoi
 
 If you are expert in this field, and you are only interested in training your own CosyVoice model from scratch, you can skip this step.
 
-``` python
+```python
 # SDK模型下载
 from modelscope import snapshot_download
 snapshot_download('iic/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
@@ -77,7 +95,7 @@ snapshot_download('iic/CosyVoice-300M-Instruct', local_dir='pretrained_models/Co
 snapshot_download('iic/CosyVoice-ttsfrd', local_dir='pretrained_models/CosyVoice-ttsfrd')
 ```
 
-``` sh
+```sh
 # git模型下载，请确保已安装git lfs
 mkdir -p pretrained_models
 git clone https://www.modelscope.cn/iic/CosyVoice-300M.git pretrained_models/CosyVoice-300M
@@ -91,7 +109,7 @@ Optionaly, you can unzip `ttsfrd` resouce and install `ttsfrd` package for bette
 
 Notice that this step is not necessary. If you do not install `ttsfrd` package, we will use WeTextProcessing by default.
 
-``` sh
+```sh
 cd pretrained_models/CosyVoice-ttsfrd/
 unzip resource.zip -d .
 pip install ttsfrd-0.3.6-cp38-cp38-linux_x86_64.whl
@@ -99,16 +117,16 @@ pip install ttsfrd-0.3.6-cp38-cp38-linux_x86_64.whl
 
 **Basic Usage**
 
-For zero_shot/cross_lingual inference, please use `CosyVoice-300M` model.
+For zero\_shot/cross\_lingual inference, please use `CosyVoice-300M` model.
 For sft inference, please use `CosyVoice-300M-SFT` model.
 For instruct inference, please use `CosyVoice-300M-Instruct` model.
 First, add `third_party/Matcha-TTS` to your `PYTHONPATH`.
 
-``` sh
+```sh
 export PYTHONPATH=third_party/Matcha-TTS
 ```
 
-``` python
+```python
 from cosyvoice.cli.cosyvoice import CosyVoice
 from cosyvoice.utils.file_utils import load_wav
 import torchaudio
@@ -144,11 +162,11 @@ for i, j in enumerate(cosyvoice.inference_instruct('在面对挑战时，他展�
 **Start web demo**
 
 You can use our web demo page to get familiar with CosyVoice quickly.
-We support sft/zero_shot/cross_lingual/instruct inference in web demo.
+We support sft/zero\_shot/cross\_lingual/instruct inference in web demo.
 
 Please see the demo website for details.
 
-``` python
+```python
 # change iic/CosyVoice-300M-SFT for sft inference, or iic/CosyVoice-300M-Instruct for instruct inference
 python3 webui.py --port 50000 --model_dir pretrained_models/CosyVoice-300M
 ```
@@ -163,7 +181,7 @@ You can get familiar with CosyVoice following this recipie.
 Optionally, if you want to use grpc for service deployment,
 you can run following steps. Otherwise, you can just ignore this step.
 
-``` sh
+```sh
 cd runtime/python
 docker build -t cosyvoice:v1.0 .
 # change iic/CosyVoice-300M to iic/CosyVoice-300M-Instruct if you want to use instruct inference
@@ -181,15 +199,18 @@ You can directly discuss on [Github Issues](https://github.com/FunAudioLLM/CosyV
 
 You can also scan the QR code to join our official Dingding chat group.
 
-<img src="./asset/dingding.png" width="250px">
-
 ## Acknowledge
 
-1. We borrowed a lot of code from [FunASR](https://github.com/modelscope/FunASR).
-2. We borrowed a lot of code from [FunCodec](https://github.com/modelscope/FunCodec).
-3. We borrowed a lot of code from [Matcha-TTS](https://github.com/shivammehta25/Matcha-TTS).
-4. We borrowed a lot of code from [AcademiCodec](https://github.com/yangdongchao/AcademiCodec).
-5. We borrowed a lot of code from [WeNet](https://github.com/wenet-e2e/wenet).
+1.  We borrowed a lot of code from [FunASR](https://github.com/modelscope/FunASR).
+
+2.  We borrowed a lot of code from [FunCodec](https://github.com/modelscope/FunCodec).
+
+3.  We borrowed a lot of code from [Matcha-TTS](https://github.com/shivammehta25/Matcha-TTS).
+
+4.  We borrowed a lot of code from [AcademiCodec](https://github.com/yangdongchao/AcademiCodec).
+
+5.  We borrowed a lot of code from [WeNet](https://github.com/wenet-e2e/wenet).
 
 ## Disclaimer
+
 The content provided above is for academic purposes only and is intended to demonstrate technical capabilities. Some examples are sourced from the internet. If any content infringes on your rights, please contact us to request its removal.
