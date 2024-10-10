@@ -10,6 +10,14 @@ For `SenseVoice`, visit [SenseVoice repo](https://github.com/FunAudioLLM/SenseVo
 
 docker build构建：`docker build -t cosyvoice_stream .`
 
+运行docker: \$ `docker run -d --name cosyvoice_server -p 8080:8080 `\
+`--runtime=nvidia `\
+`-e NVIDIA_DRIVER_CAPABILITIES=all `\
+`-e NVIDIA_VISIBLE_DEVICES=all `\
+`cosyvoice`
+
+参考使用：<https://github.com/catcto/CosyVoiceDocker>  这个地址里面的都可以运行
+
 ## Roadmap
 
 *   [x] 2024/07
