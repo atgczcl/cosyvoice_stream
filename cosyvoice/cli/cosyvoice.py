@@ -19,7 +19,7 @@ from modelscope import snapshot_download
 from cosyvoice.cli.frontend import CosyVoiceFrontEnd
 from cosyvoice.cli.model import CosyVoiceModel
 from cosyvoice.utils.file_utils import logging
-
+import threading
 
 class CosyVoice:
 
@@ -112,25 +112,42 @@ class CosyVoice:
             yield model_output
             start_time = time.time()
 
-    def stream_clone(self, tts_text, prompt_text, prompt_speech_16k, stream=True, speed=1.0):
+    def stream_clone(self, tts_text, prompt_text, prompt_speech_16k, stream=True, speed=1.0, stop_generation_flag: threading.Event = None):
         prompt_text = self.frontend.text_normalize(prompt_text, split=False)
         for i in tqdm(self.frontend.text_normalize(tts_text, split=True)):
+            if stop_generation_flag is not None and stop_generation_flag.is_set():
+                break
             model_input = self.frontend.frontend_zero_shot(i, prompt_text, prompt_speech_16k)
             start_time = time.time()
             logging.info('synthesis text {}'.format(i))
             for model_output in self.model.tts(**model_input, stream=stream, speed=speed):
+                if stop_generation_flag is not None and stop_generation_flag.is_set():
+                    break
                 speech_len = model_output['tts_speech'].shape[1] / 22050
                 logging.info('yield speech clone len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
                 tts_speech_chunk = model_output['tts_speech']
-                start_time = time.time()
                 yield tts_speech_chunk
+                start_time = time.time()
 
-    def strem_sft(self, tts_text, spk_id, stream=True, speed=1.0):
+    def stream_sft(self, tts_text: str, spk_id: int, stream: bool = True, speed: float = 1.0, stop_generation_flag: threading.Event = None):
+        """
+        流式处理文本转语音的功能。
+        
+        :param tts_text: 要转换的文本
+        :param spk_id: 说话人ID
+        :param stream: 是否流式传输
+        :param speed: 语速
+        :param stop_generation_flag: 停止生成标志
+        """
         for i in tqdm(self.frontend.text_normalize(tts_text, split=True)):
+            if stop_generation_flag is not None and stop_generation_flag.is_set():
+                break
             model_input = self.frontend.frontend_sft(i, spk_id)
             start_time = time.time()
             logging.info('synthesis text {}'.format(i))
             for model_output in self.model.tts(**model_input, stream=stream, speed=speed):
+                if stop_generation_flag is not None and stop_generation_flag.is_set():
+                    break
                 speech_len = model_output['tts_speech'].shape[1] / 22050
                 logging.info('yield speech sft len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
                 tts_speech_chunk = model_output['tts_speech']
