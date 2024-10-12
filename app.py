@@ -64,7 +64,9 @@ def streamclone():
             float_data = chunk.numpy()
             byte_data = float_data.tobytes()
             logging.info(f"len data: {len(byte_data)}")
-            yield byte_data
+            encoded_data = base64.b64encode(byte_data).decode('utf-8')
+            json_data = {"data": encoded_data}
+            yield f"{json.dumps(json_data)}\n\n"
         
         # 数据发送完成后设置 stop_generation_flag 为 True 并删除 request_id
         with threading.Lock():
@@ -73,7 +75,7 @@ def streamclone():
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}")
 
-    return Response(generate_stream(), mimetype="audio/pcm"), 200, {'X-Request-ID': request_id}
+    return Response(generate_stream(), mimetype="text/event-stream"), 200, {'X-Request-ID': request_id}
 
 @app.route("/inference/stream_sft", methods=['POST'])
 def stream_sft():
