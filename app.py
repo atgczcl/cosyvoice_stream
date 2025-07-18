@@ -9,26 +9,38 @@ import torch
 import torchaudio
 from modelscope import snapshot_download
 from cosyvoice.cli.cosyvoice import CosyVoice
-from cosyvoice.utils.file_utils import load_wav
+
 import json
 import base64
 import threading
 import uuid
 from cosyvoice.utils.file_utils import logging
 from typing import Dict, Any, Generator, Tuple
+sys.path.append('third_party/Matcha-TTS')
+from vllm import ModelRegistry
+from cosyvoice.vllm.cosyvoice2 import CosyVoice2ForCausalLM
+ModelRegistry.register_model("CosyVoice2ForCausalLM", CosyVoice2ForCausalLM)
+
+from cosyvoice.cli.cosyvoice import CosyVoice2
+from cosyvoice.utils.file_utils import load_wav
+from cosyvoice.utils.common import set_all_random_seed
+from tqdm import tqdm
+
+
 
 # 其他导入和初始化代码保持不变
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append('{}'.format(ROOT_DIR))
 sys.path.append('{}/third_party/Matcha-TTS'.format(ROOT_DIR))
 
-if not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml') or not os.path.exists('pretrained_models/CosyVoice-300M-SFT/cosyvoice.yaml'):
+if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice.yaml') or not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml') or not os.path.exists('pretrained_models/CosyVoice-300M-SFT/cosyvoice.yaml'):
     snapshot_download('iic/CosyVoice-300M', cache_dir='pretrained_models/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
     snapshot_download('iic/CosyVoice-300M-SFT', cache_dir='pretrained_models/CosyVoice-300M-SFT', local_dir='pretrained_models/CosyVoice-300M-SFT')
 
-cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M')
+# cosyvoice = CosyVoice('pretrained_models/CosyVoice2-0.5B')
+cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=True, load_trt=True, load_vllm=True, fp16=True)
 
-print(cosyvoice.list_avaliable_spks())
+print(cosyvoice.list_available_spks())
 
 app = Flask(__name__)
 CORS(app)
@@ -75,7 +87,11 @@ def streamclone():
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}")
 
-    return Response(generate_stream(), mimetype="text/event-stream"), 200, {'X-Request-ID': request_id}
+    # return Response(generate_stream(), mimetype="text/event-stream"), 200, {'X-Request-ID': request_id}
+    rsp = Response(generate_stream(), mimetype='text/event-stream')
+    rsp.headers['X-Request-ID'] = request_id
+    rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
+    return rsp, 200
 
 @app.route("/inference/stream_sft", methods=['POST'])
 def stream_sft():
@@ -143,8 +159,11 @@ def stream_sft_json():
             if request_id in stop_generation_flags:
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}|{len(stop_generation_flags)}")
-
-    return Response(generate_stream(), mimetype='text/event-stream'), 200, {'X-Request-ID': request_id}
+    # rsp = Response(generate_stream(), mimetype='text/event-stream'), 200, {'X-Request-ID': request_id}
+    rsp = Response(generate_stream(), mimetype='text/event-stream')
+    rsp.headers['X-Request-ID'] = request_id
+    rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
+    return rsp, 200
 
 @app.route("/inference/stop_generation", methods=['POST'])
 def stop_generation():
