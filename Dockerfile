@@ -1,4 +1,5 @@
-FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
+# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     tar \
@@ -16,7 +17,7 @@ ENV PATH="/root/miniconda3/bin:${PATH}"
 
 # Install requirements
 RUN conda config --add channels conda-forge
-RUN conda install python==3.8
+RUN conda install python==3.10
 # RUN git clone https://gitee.com/atgczcl/cosyvoice_stream.git /root/CosyVoice
 
 COPY . /root/CosyVoice
