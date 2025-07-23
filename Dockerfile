@@ -32,8 +32,8 @@ ENV API_HOST=0.0.0.0
 ENV API_PORT=8080
 
 # Run
-COPY download_model.py .
-# RUN python download_model.py
+# COPY download_model.py .
+RUN python download_model.py
 #拷贝文件夹D:\AI\Voice\CosyVoice\pretrained_models
 # COPY pretrained_models ./pretrained_models
 # COPY index.html .
