@@ -15,6 +15,10 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
     && rm -f Miniconda3-latest-Linux-x86_64.sh
 ENV PATH="/root/miniconda3/bin:${PATH}"
 
+# Accept conda-forge channel Terms of Service
+RUN conda tos accept --override-channels --channel conda-forge
+
+
 # Install requirements
 RUN conda config --add channels conda-forge
 RUN conda install python=3.10
