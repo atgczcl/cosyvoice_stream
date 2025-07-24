@@ -17,7 +17,7 @@ ENV PATH="/root/miniconda3/bin:${PATH}"
 
 # Install requirements
 RUN conda config --add channels conda-forge
-RUN conda install python==3.10
+RUN conda install -y python=3.10
 # RUN git clone https://gitee.com/atgczcl/cosyvoice_stream.git /root/CosyVoice
 
 COPY . /root/CosyVoice
