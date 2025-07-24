@@ -17,7 +17,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
 ENV PATH="/root/miniconda3/bin:${PATH}"
 
 # 接受 conda-forge 频道的 Terms of Service
-RUN conda tos accept --override-channels --channel conda-forge
+# RUN conda tos accept --override-channels --channel conda-forge
 
 # 创建并激活 Cosyvoice_stream 环境
 RUN conda create -n Cosyvoice_stream python=3.10 -y
