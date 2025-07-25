@@ -1,30 +1,3 @@
-# FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
-# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
-
-# # 安装基本工具
-# RUN apt-get update && apt-get install -y \
-#     ffmpeg \
-#     tar \
-#     wget \
-#     git \
-#     bash \
-#     vim
-
-# # 安装 Miniconda
-# RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-#     && mkdir -p /root/.conda \
-#     && bash Miniconda3-latest-Linux-x86_64.sh -b -p /root/miniconda3 \
-#     && rm -f Miniconda3-latest-Linux-x86_64.sh
-# ENV PATH="/root/miniconda3/bin:${PATH}"
-
-# # 接受 conda-forge 频道的 Terms of Service
-# # RUN conda tos accept --override-channels --channel conda-forge
-
-# # 创建并激活 Cosyvoice_stream 环境
-# RUN conda create -n Cosyvoice_stream python=3.10 -y
-# ENV PATH="/root/miniconda3/envs/Cosyvoice_stream/bin:${PATH}"
-
-
 FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 ENV DEBIAN_FRONTEND=noninteractive
 
