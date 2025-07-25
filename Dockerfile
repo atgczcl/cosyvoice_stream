@@ -1,45 +1,36 @@
-FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
-ENV DEBIAN_FRONTEND=noninteractive
+FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    tar \
+    wget \
+    git \
+    bash \
+    vim
 
-WORKDIR /opt/CosyVoice
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && mkdir /root/.conda \
+    && bash Miniconda3-latest-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh
+ENV PATH="/root/miniconda3/bin:${PATH}"
 
-RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
-RUN apt-get update -y
-RUN apt-get -y install git unzip git-lfs
-RUN git lfs install
-# RUN git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
-COPY . /opt/CosyVoice
-# here we use python==3.10 because we cannot find an image which have both python3.8 and torch2.0.1-cu118 installed
-RUN pip3 install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com
-# RUN cd CosyVoice/runtime/python/grpc && python3 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. cosyvoice.proto
+# Install requirements
+RUN conda config --add channels conda-forge
+RUN conda install python==3.8
+# RUN git clone https://github.com/FunAudioLLM/CosyVoice.git /root/CosyVoice
+COPY . /root/CosyVoice
+WORKDIR /root/CosyVoice
+RUN git submodule update --init --recursive
+RUN pip install -r requirements.txt
+RUN pip install flask waitress
 
-WORKDIR /opt/CosyVoice
+# Set environment variables
+ENV PYTHONPATH=third_party/Matcha-TTS
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8080
 
-
-
-
-# 安装项目依赖
-# COPY . /root/CosyVoice
-# WORKDIR /root/CosyVoice
-# RUN conda install --file requirements.txt
-
-# # 更新子模块
-# RUN git submodule update --init --recursive
-
-# # 安装其他 Python 依赖
-# RUN pip install -r requirements.txt
-
-# # 设置环境变量
-# ENV PYTHONPATH=third_party/Matcha-TTS
-# ENV API_HOST=0.0.0.0
-# ENV API_PORT=8080
-
-# # 运行项目
+# Run
+# COPY download_model.py .
 # RUN python download_model.py
-# COPY pretrained_models ./pretrained_models
-# COPY index.html .
-# COPY cosyvoice.py ./cosyvoice/cli/cosyvoice.py
-# COPY app.py .
-# CMD ["python", "app.py"]
+# COPY api.py .
+# CMD ["python", "api.py"]
