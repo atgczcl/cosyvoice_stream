@@ -1,0 +1,66 @@
+# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+
+
+# RUN apt-get update && apt-get install -y \
+#     ffmpeg \
+#     tar \
+#     wget \
+#     git \
+#     bash \
+#     vim
+
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+ARG VENV_NAME="cosyvoice"
+ENV VENV=$VENV_NAME
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+ENV DEBIAN_FRONTEN=noninteractive
+ENV PYTHONUNBUFFERED=1
+SHELL ["/bin/bash", "--login", "-c"]
+
+RUN apt-get update -y --fix-missing
+RUN apt-get install -y git build-essential curl tar wget ffmpeg unzip git git-lfs sox libsox-dev && \
+    apt-get clean && \
+    git lfs install
+
+
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && mkdir /root/.conda \
+    && bash Miniconda3-latest-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh
+ENV PATH="/root/miniconda3/bin:${PATH}"
+
+# Install requirements
+RUN conda config --add channels conda-forge
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main --channel https://repo.anaconda.com/pkgs/r
+RUN conda install python==3.10
+# RUN git clone https://gitee.com/atgczcl/cosyvoice_stream.git /root/CosyVoice
+# RUN git clone https://username:password@gitee.com/atgczcl/cosyvoice_stream.git /root/CosyVoice
+# http://192.168.11.101:9980/qihang/u3d/cosyvoice_stream.git
+# RUN git clone http://zhangchenglong:zcl112358@192.168.11.101:9980/qihang/u3d/cosyvoice_stream.git /root/CosyVoice
+# 拷贝当前目录下除了.git文件夹以外的文件到容器内
+COPY . /root/CosyVoice
+
+WORKDIR /root/CosyVoice
+RUN git submodule update --init --recursive
+RUN pip install -r requirements.txt
+# RUN pip install -r requirements.txt --trusted-host files.pythonhosted.org --trusted-host pypi.org --trusted-host files.pythonhosted.org --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install flask waitress flask-cors
+
+# Set environment variables
+ENV PYTHONPATH=third_party/Matcha-TTS
+ENV API_HOST=0.0.0.0
+ENV API_PORT=8080
+
+# Run
+COPY download_model.py .
+# RUN python download_model.py
+#拷贝文件夹D:\AI\Voice\CosyVoice\pretrained_models
+# COPY pretrained_models ./pretrained_models
+# COPY index.html .
+# # COPY cosyvoice.py ./cosyvoice/cli/cosyvoice.py
+# COPY app.py .
+# CMD ["python", "app.py"]

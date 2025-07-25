@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>PCM Stream Player</title>
+</head>
+
+<body>
+  <textarea id="inputs">hello world</textarea>
+  <button onclick="startStream()">get-stream</button>
+  <script>
+    async function startStream() {
+      console.log("press")
+      const data = document.getElementById("inputs").value;
+      const url = 'http://127.0.0.1:8080//inference/stream';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: data,
+            prompt_text: '确保已部署CosyVoice项目，已将 CosyVoice-api中的api.py放入，并成功启动了 api.py。',
+            prompt_speech: "yy.wav"
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const sampleRate = 22050;
+        let bufferSize = sampleRate / 2; // Adjust buffer size as needed (0.5 seconds buffer)
+        let audioBufferQueue = [];
+        let source;
+        let isPlaying = false;
+        let leftover = new Uint8Array(0);
+
+        function processBuffer() {
+          if (isPlaying || !audioBufferQueue.length) return;
+          console.log("processBuffer() enter");
+
+          const tmpBufQueue = audioBufferQueue;
+          audioBufferQueue = [];
+          const totalLength = tmpBufQueue.reduce((acc, chunk) => acc + chunk.length, 0);
+          console.log("total length: ", totalLength);
+          const audioBuffer = audioContext.createBuffer(1, totalLength, sampleRate);
+          const combinedArray = new Float32Array(totalLength);
+
+          let offset = 0;
+          while (tmpBufQueue.length) {
+            const chunk = tmpBufQueue.shift();
+            combinedArray.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          audioBuffer.copyToChannel(combinedArray, 0);
+
+          source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioContext.destination);
+          source.onended = () => {
+            isPlaying = false;
+            if (audioBufferQueue.length > 0) {
+              processBuffer();
+            }
+          };
+          source.start();
+          isPlaying = true;
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Combine leftover with new data
+          const combinedValue = new Uint8Array(leftover.length + value.length);
+          combinedValue.set(leftover);
+          combinedValue.set(value, leftover.length);
+
+          const byteLength = combinedValue.byteLength;
+          const remainder = byteLength % 4;
+          const validLength = byteLength - remainder;
+
+          // Separate valid data and leftover
+          const validData = combinedValue.slice(0, validLength);
+          leftover = combinedValue.slice(validLength);
+
+          const float32Array = new Float32Array(validData.buffer);
+          audioBufferQueue.push(float32Array);
+
+          // Process buffer if enough data is collected
+          processBuffer();
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+  </script>
+</body>
+
+</html>
