@@ -14,23 +14,32 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
     && rm -f Miniconda3-latest-Linux-x86_64.sh
 ENV PATH="/root/miniconda3/bin:${PATH}"
 
-# Install requirements
+# 接受 Anaconda 服务条款并配置 conda
 RUN conda config --add channels conda-forge
-RUN conda install python==3.8
-# RUN git clone https://github.com/FunAudioLLM/CosyVoice.git /root/CosyVoice
+# RUN conda config --set anaconda_terms_accepted yes
+RUN conda tos accept --override-channels --channel conda-forge
+
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# 安装 Python 3.10
+RUN conda install python==3.10
+
+# 复制代码并设置工作目录
 COPY . /root/CosyVoice
 WORKDIR /root/CosyVoice
+
+# 初始化子模块
 RUN git submodule update --init --recursive
+
+# 升级 pip 并安装依赖
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
+
+# 安装额外依赖
 RUN pip install flask waitress
 
-# Set environment variables
-ENV PYTHONPATH=third_party/Matcha-TTS
+# 设置环境变量
+ENV PYTHONPATH=/root/CosyVoice/third_party/Matcha-TTS
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8080
-
-# Run
-# COPY download_model.py .
-# RUN python download_model.py
-# COPY api.py .
-# CMD ["python", "api.py"]
