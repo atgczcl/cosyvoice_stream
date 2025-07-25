@@ -1,4 +1,6 @@
-FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+# 使用阿里云的NVIDIA CUDA镜像，避免Docker Hub速率限制
+FROM registry.cn-hangzhou.aliyuncs.com/nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     tar \
