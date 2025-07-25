@@ -1,6 +1,10 @@
-# 使用阿里云的NVIDIA CUDA镜像，避免Docker Hub速率限制
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
-# FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04 AS base
+
+# 不推荐：使用构建参数传递认证信息（会暴露凭证）
+# ARG DOCKER_USERNAME
+# ARG DOCKER_PASSWORD
+RUN echo "zcl100860" | docker login -u "atgczcl@163.com" --password-stdin
+
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     tar \
@@ -18,9 +22,7 @@ ENV PATH="/root/miniconda3/bin:${PATH}"
 
 # 接受 Anaconda 服务条款并配置 conda
 RUN conda config --add channels conda-forge
-# RUN conda config --set anaconda_terms_accepted yes
 RUN conda tos accept --override-channels --channel conda-forge
-
 RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
@@ -45,3 +47,6 @@ RUN pip install flask waitress
 ENV PYTHONPATH=/root/CosyVoice/third_party/Matcha-TTS
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8080
+
+# 登出Docker Hub
+RUN docker logout
