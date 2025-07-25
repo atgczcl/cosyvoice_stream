@@ -26,7 +26,7 @@ RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/downlo
     echo "conda activate ${VENV}" >> /opt/nvidia/entrypoint.d/110.conda_default_env.sh && \
     echo "conda activate ${VENV}" >> $HOME/.bashrc
 
-ENV PATH /opt/conda/bin:$PATH
+ENV PATH=/opt/conda/bin:$PATH
 
 RUN conda config --add channels conda-forge && \
     conda config --set channel_priority strict
@@ -36,7 +36,7 @@ RUN conda config --add channels conda-forge && \
 
 RUN conda create -y -n ${VENV} python=3.10
 ENV CONDA_DEFAULT_ENV=${VENV}
-ENV PATH /opt/conda/bin:/opt/conda/envs/${VENV}/bin:$PATH
+ENV PATH=/opt/conda/bin:/opt/conda/envs/${VENV}/bin:$PATH
 
 WORKDIR /workspace
 
