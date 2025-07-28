@@ -30,6 +30,12 @@ COPY . /root/CosyVoice
 WORKDIR /root/CosyVoice
 RUN git submodule update --init --recursive
 RUN apt-get install -y libsndfile1 libsndfile1-dev
+# 在安装requirements.txt之前添加pip镜像源配置
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip config set install.trusted-host pypi.tuna.tsinghua.edu.cn
+
+# 在安装requirements.txt之前添加
+RUN apt-get update && apt-get install -y build-essential python3-dev
 RUN pip install -r requirements.txt
 # RUN pip install flask waitress flask-cors
 
