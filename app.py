@@ -21,8 +21,9 @@ from typing import Dict, Any, Generator, Tuple
 
 
 
-if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice.yaml') or not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml'):
-    snapshot_download('iic/CosyVoice-300M', cache_dir='pretrained_models/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
+if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice.yaml'):
+    # or not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml'):
+    # snapshot_download('iic/CosyVoice-300M', cache_dir='pretrained_models/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
     snapshot_download('iic/CosyVoice2-0.5B', cache_dir='pretrained_models/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')
 
 # cosyvoice = CosyVoice('pretrained_models/CosyVoice2-0.5B')
