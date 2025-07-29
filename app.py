@@ -10,6 +10,8 @@ from cosyvoice.utils.file_utils import load_wav, logging
 
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+# 修改: 使用 StreamingResponse 来处理异步生成器
+from fastapi.responses import StreamingResponse
 import numpy as np
 from modelscope import snapshot_download
 
@@ -21,15 +23,15 @@ from typing import Dict, Any, Generator, Tuple
 
 
 
-if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice.yaml'):
+if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice2.yaml'):
+    snapshot_download('iic/CosyVoice2-0.5B', cache_dir='pretrained_models/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')
     # or not os.path.exists('pretrained_models/CosyVoice-300M/cosyvoice.yaml'):
     # snapshot_download('iic/CosyVoice-300M', cache_dir='pretrained_models/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
-    snapshot_download('iic/CosyVoice2-0.5B', cache_dir='pretrained_models/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')
 
 # cosyvoice = CosyVoice('pretrained_models/CosyVoice2-0.5B')
 cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=False, load_trt=False, load_vllm=False, fp16=False)
 
-print(cosyvoice.list_available_spks())
+# print(cosyvoice.list_available_spks())
 
 app = FastAPI()
 app.add_middleware(
@@ -82,7 +84,7 @@ async def streamclone(request: Request):
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}")
 
-    rsp = Response(generate_stream(), media_type="text/event-stream")
+    rsp = StreamingResponse(generate_stream(), media_type="text/event-stream")
     rsp.headers['X-Request-ID'] = request_id
     rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
     return rsp
@@ -112,7 +114,7 @@ async def stream_sft(request: Request):
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}")
 
-    rsp = Response(generate_stream(), media_type="audio/pcm")
+    rsp = StreamingResponse(generate_stream(), media_type="audio/pcm")
     rsp.headers['X-Request-ID'] = request_id
     rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
     return rsp
@@ -158,7 +160,8 @@ async def stream_sft_json(request: Request):
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}|{len(stop_generation_flags)}")
     
-    rsp = Response(generate_stream(), media_type="text/event-stream")
+    
+    rsp = StreamingResponse(generate_stream(), media_type="text/event-stream")
     rsp.headers['X-Request-ID'] = request_id
     rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
     return rsp

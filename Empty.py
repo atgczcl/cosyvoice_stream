@@ -2,6 +2,11 @@
 
 import time
 
+# 10秒钟打印一次"Hello, world!", 10秒钟后退出
+a = 0
 while True:
-    print("Hello, world!")
-    time.sleep(1)
+    time.sleep(2)
+    print("Hello, world!", a)
+    a += 1
+    if a == 10:
+        break

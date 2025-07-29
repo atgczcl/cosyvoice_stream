@@ -175,6 +175,46 @@ class CosyVoice:
                 # yield model_output
                 start_time = time.time()
 
+    # stream_one_shot
+    def stream_one_shot(self, tts_text, prompt_text, prompt_speech_16k, stream=False, speed=1.0, stop_generation_flag: threading.Event = None, text_frontend=True):
+        """_summary_
+
+        流式处理文本转语音的功能。
+        def text_generator():
+        yield '收到好友从远方寄来的生日礼物，'
+        yield '那份意外的惊喜与深深的祝福'
+        yield '让我心中充满了甜蜜的快乐，'
+        yield '笑容如花儿般绽放。'
+    for i, j in enumerate(cosyvoice.inference_zero_shot(text_generator(), '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+
+        torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+        Args:
+            tts_text (_type_): _description_
+            prompt_text (_type_): _description_
+            prompt_speech_16k (_type_): _description_
+            stream (bool, optional): _description_. Defaults to False.
+            speed (float, optional): _description_. Defaults to 1.0.
+            stop_generation_flag (threading.Event, optional): _description_. Defaults to None.
+            text_frontend (bool, optional): _description_. Defaults to True.
+
+        Yields:
+            _type_: _description_
+        """
+        prompt_text = self.frontend.text_normalize(prompt_text, split=False, text_frontend=text_frontend)
+        for i in tqdm(self.frontend.text_normalize(tts_text, split=True, text_frontend=text_frontend)):
+            if (not isinstance(i, Generator)) and len(i) < 0.5 * len(prompt_text):
+                logging.warning('synthesis text {} too short than prompt text {}, this may lead to bad performance'.format(i, prompt_text))
+            model_input = self.frontend.frontend_zero_shot(i, prompt_text, prompt_speech_16k, self.sample_rate, '')
+            start_time = time.time()
+            logging.info('synthesis text {}'.format(i))
+            for model_output in self.model.tts(**model_input, stream=stream, speed=speed):
+                speech_len = model_output['tts_speech'].shape[1] / 22050
+                logging.info('yield speech len {}, rtf {}'.format(speech_len, (time.time() - start_time) / speech_len))
+                tts_speech_chunk = model_output['tts_speech']
+                yield tts_speech_chunk
+                # yield model_output
+                start_time = time.time()
+
     # def stream_clone(self, tts_text, prompt_text, prompt_speech_16k, stream=True, speed=1.0, stop_generation_flag: threading.Event = None):
     #     prompt_text = self.frontend.text_normalize(prompt_text, split=False)
     #     for i in tqdm(self.frontend.text_normalize(tts_text, split=True)):
