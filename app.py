@@ -30,8 +30,11 @@ if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice2.yaml'):
 
 # cosyvoice = CosyVoice('pretrained_models/CosyVoice2-0.5B')
 cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=False, load_trt=False, load_vllm=False, fp16=False)
-
-# print(cosyvoice.list_available_spks())
+prompt_speech_16k_dict = {
+    '中文女': load_wav('./asset/zero_shot_prompt.wav', 16000),
+    '中文男': load_wav('./asset/cross_lingual_prompt.wav', 16000),
+    }
+print(cosyvoice.list_available_spks())
 
 app = FastAPI()
 app.add_middleware(
@@ -97,6 +100,10 @@ async def stream_sft(request: Request):
     speaker = question_data.get('speaker')
     if not query:
         raise HTTPException(status_code=400, detail="Query parameter 'query' is required")
+    
+    # 添加说话人检查
+    if speaker not in cosyvoice.list_available_spks():
+        raise HTTPException(status_code=400, detail=f"Speaker '{speaker}' not found. Available speakers: {cosyvoice.list_available_spks()}")
 
     async def generate_stream():
         for chunk in cosyvoice.stream_sft(query, speaker, True, 1.0, stop_generation_flag):
@@ -119,8 +126,8 @@ async def stream_sft(request: Request):
     rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
     return rsp
 
-@app.post("/inference/stream_sft_json")
-async def stream_sft_json(request: Request):
+@app.post("/inference/stream_sft_json1")
+async def stream_sft_json1(request: Request):
     stop_generation_flag, request_id = get_stop_generation_flag()
     try:
         question_data = await request.json()
@@ -141,6 +148,10 @@ async def stream_sft_json(request: Request):
 
     if not query or not isinstance(query, str):
         raise HTTPException(status_code=400, detail="Query parameter 'query' must be a non-empty string")
+    
+    # 添加说话人检查
+    if speaker not in cosyvoice.list_available_spks():
+        raise HTTPException(status_code=400, detail=f"Speaker '{speaker}' not found. Available speakers: {cosyvoice.list_available_spks()}")
 
     async def generate_stream():
         for chunk in cosyvoice.stream_sft(query, speaker, isStream, speed, stop_generation_flag):
@@ -160,11 +171,62 @@ async def stream_sft_json(request: Request):
                 del stop_generation_flags[request_id]
                 logging.info(f"Auto Stop generation for request ID: {request_id}|{len(stop_generation_flags)}")
     
+    rsp = StreamingResponse(generate_stream(), media_type="text/event-stream")
+    rsp.headers['X-Request-ID'] = request_id
+    rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
+    return rsp
+
+@app.post("/inference/stream_sft_json")
+async def stream_one_shot(request: Request):
+    stop_generation_flag, request_id = get_stop_generation_flag()
+    try:
+        question_data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON request")
+    
+    query = question_data.get('query')
+    speaker = question_data.get('speaker')
+    speed = question_data.get('speed', 1.0)
+    isStream = question_data.get('isStream', False)
+
+    try:
+        speed = float(speed)  # 确保速度为浮点数
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid value for 'speed'")
+
+    isStream = isStream == 'true'  # 确保 isStream 为布尔类型
+
+    if not query or not isinstance(query, str):
+        raise HTTPException(status_code=400, detail="Query parameter 'query' must be a non-empty string")
+    
+    # 添加说话人检查
+    # if speaker not in cosyvoice.list_available_spks():
+    #     raise HTTPException(status_code=400, detail=f"Speaker '{speaker}' not found. Available speakers: {cosyvoice.list_available_spks()}")
+    prompt_speech_16k = prompt_speech_16k_dict.get(speaker, "中文女")
+
+    async def generate_stream():
+        for chunk in cosyvoice.stream_one_shot(query, '希望你以后能够做的比我还好呦。', prompt_speech_16k, isStream, speed, stop_generation_flag):
+            if stop_generation_flag.is_set():
+                break
+            float_data = chunk.numpy()
+            byte_data = float_data.tobytes()
+            logging.info(f"len data: {len(byte_data)}")
+            encoded_data = base64.b64encode(byte_data).decode('utf-8')
+            json_data = {"data": encoded_data}
+            yield f"{json.dumps(json_data)}\n\n"
+        
+        # 数据发送完成后设置 stop_generation_flag 为 True 并删除 request_id
+        with threading.Lock():
+            stop_generation_flag.set()
+            if request_id in stop_generation_flags:
+                del stop_generation_flags[request_id]
+                logging.info(f"Auto Stop generation for request ID: {request_id}|{len(stop_generation_flags)}")
     
     rsp = StreamingResponse(generate_stream(), media_type="text/event-stream")
     rsp.headers['X-Request-ID'] = request_id
     rsp.headers['Access-Control-Expose-Headers'] = 'X-Request-ID'
     return rsp
+
 
 @app.post("/inference/stop_generation")
 async def stop_generation(request: Request):
