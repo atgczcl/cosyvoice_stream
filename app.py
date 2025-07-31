@@ -20,7 +20,7 @@ import base64
 import threading
 import uuid
 from typing import Dict, Any, Generator, Tuple
-
+import re
 
 
 if  not os.path.exists('pretrained_models/CosyVoice2-0.5B/cosyvoice2.yaml'):
@@ -204,6 +204,8 @@ async def stream_one_shot(request: Request):
     #     raise HTTPException(status_code=400, detail=f"Speaker '{speaker}' not found. Available speakers: {cosyvoice.list_available_spks()}")
     prompt_speech_16k = prompt_speech_16k_dict.get(speaker, "中文女")
 
+    
+
     async def generate_stream():
         for chunk in cosyvoice.stream_one_shot(query, '希望你以后能够做的比我还好呦。', prompt_speech_16k, isStream, speed, stop_generation_flag):
             if stop_generation_flag.is_set():
@@ -248,6 +250,32 @@ async def stop_generation(request: Request):
         return {"message": f"Stopped generation for request IDs: {stopped_request_ids}"}
     else:
         raise HTTPException(status_code=404, detail="No active generations found for the provided request IDs")
+    
+# 定义文本分词生成器函数
+# 修改文本生成器实现
+def text_generator(query):
+    # 使用正则表达式分割句子
+    sentences = re.split(r'[。！？!?;；]', query)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
+    for sentence in sentences:
+        if sentence:  # 确保句子不为空
+            # 如果句子太长，可以进一步分割
+            if len(sentence) > 50:
+                # 按逗号、顿号等进一步分割
+                sub_sentences = re.split(r'[,，、]', sentence)
+                temp_sentence = ""
+                for sub in sub_sentences:
+                    temp_sentence += sub
+                    if len(temp_sentence) > 20:
+                        yield temp_sentence.strip()
+                        temp_sentence = ""
+                if temp_sentence.strip():
+                    yield temp_sentence.strip()
+            else:
+                yield sentence
+    # 添加结束标记
+    yield None  # 确保生成器结束
 
 if __name__ == "__main__":
     import uvicorn

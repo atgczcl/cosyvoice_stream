@@ -3,6 +3,8 @@ import json
 import base64
 import time
 import threading
+import re
+import jieba
 
 # API基础URL
 BASE_URL = "http://localhost:8080"
@@ -21,7 +23,7 @@ def test_stream_sft():
     }
     
     try:
-        response = requests.post(f"{BASE_URL}/inference/stream_sft", 
+        response = requests.post(f"{URL}/inference/stream_sft", 
                                json=payload, 
                                stream=True)
         
@@ -197,6 +199,92 @@ def test_list_speakers():
     # 暂时我们只是打印一个消息
     print("Available speakers: 中文女, 中文男, 英文女, 英文男 (示例)")
 
+def test_tokenized_stream_sft():
+    """
+    使用分词器对长文本进行分词，然后以双流方式测试
+    """
+    print("Testing tokenized stream sft...")
+    
+    # 长文本
+    long_text = """毫无疑问，大多数同志对学习党的十八大精神的重要性、必要性有着比较深刻的认识，并一定能“好好学习，认真领会”。但是，学习宣传的目的，必须是为了贯彻落实。因此，中央政治局会议对学习宣传贯彻党的十八大精神进行专题部署时，要求“认真学习宣传和全面贯彻落实党的十八大精神”；坚持学以致用、用以促学，把党的十八大精神四个“落实到”；各级党委要“着力抓好落实”。在党的十八大闭幕后不久，中央政治局第一次会议便迅速对学习宣传贯彻党的十八大精神研究部署，并特别强调了“落实”，体现了新一届中央领导集体高度的政治清醒和责任自觉，为全党全国上下学习宣传贯彻党的十八大精神指明了方向。
+
+毛泽东同志指出，“读书是学习，使用也是学习，而且是更重要的学习。”学习的目的全在于运用。只有坚持学以致用、用以促学、学用相长，把学习党的十八大报告和党章同研究解决本地区本部门经济社会发展中的重大问题结合起来，同研究解决影响人民幸福的利益问题结合起来，同研究解决党的建设中存在的突出问题结合起来，才能真正把学习党的十八大精神的收获转化为领导科学发展的实际本领、工作思路和良好作风。然而，反观时下，有些地方，少数同志，在学和用的问题上不能很好地统一起来，平时常常借口工作忙、事务繁，不学习或很少学习，即便学习也是蜻蜓点水、浮光掠影，浅尝辄止、一知半解。在他们看来，文件翻过、课程听过，就算完成“任务”了。对学习的目的不明确、不清楚，与实际脱节，不能做到学以致用、用以促学、学用相长。这种学习，是一种形而上学，是必须要克服和杜绝的。    在《唐顿庄园》中，唐顿在游戏中使用“唐顿庄园”作为游戏名称，这是在游戏中使用“唐顿庄园”作为游戏名称的例子。
+    """
+    
+    # 使用分词器分词并流式处理
+    try:
+        # 首先获取可用的request_id
+        response = requests.get(f"{BASE_URL}/inference/request_id")
+        request_id = response.json().get('request_id', 'default_id')
+        
+        print(f"Using request ID: {request_id}")
+        
+        # 模拟双流处理方式，发送多个分词后的句子
+        for i, sentence in enumerate(text_generator(long_text)):
+            if i >= 10:  # 限制处理前10个句子以避免过长
+                break
+                
+            payload = {
+                "query": sentence,
+                "speaker": "中文女",
+                "speed": 1.0,
+                "isStream": "true"
+            }
+            
+            print(f"Processing sentence {i+1}: {sentence}")
+            
+            response = requests.post(f"{BASE_URL}/inference/stream_sft_json", 
+                                   json=payload, 
+                                   stream=True)
+            
+            if response.status_code == 200:
+                # 处理SSE流
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith('data:'):
+                            json_str = decoded_line[5:]  # 移除 'data:' 前缀
+                            try:
+                                data = json.loads(json_str)
+                                print(f"  Received data chunk: {len(data.get('data', ''))} bytes")
+                            except json.JSONDecodeError:
+                                print(f"  Failed to decode JSON: {json_str}")
+                print(f"  Sentence {i+1} processing completed")
+            else:
+                print(f"  Error processing sentence {i+1}: {response.status_code} - {response.text}")
+                
+            # 短暂延迟以避免请求过于频繁
+            time.sleep(0.5)
+            
+        print("All tokenized sentences processed")
+        
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+
+def text_generator(query):
+    # 使用正则表达式分割句子
+    sentences = re.split(r'[。！？!?;；]', query)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
+    for sentence in sentences:
+        if sentence:  # 确保句子不为空
+            # 如果句子太长，可以进一步分割
+            if len(sentence) > 50:
+                # 按逗号、顿号等进一步分割
+                sub_sentences = re.split(r'[,，、]', sentence)
+                temp_sentence = ""
+                for sub in sub_sentences:
+                    temp_sentence += sub
+                    if len(temp_sentence) > 20:
+                        yield temp_sentence.strip()
+                        temp_sentence = ""
+                if temp_sentence.strip():
+                    yield temp_sentence.strip()
+            else:
+                yield sentence
+    # 添加结束标记
+    yield None  # 确保生成器结束
+
 if __name__ == "__main__":
     print("CosyVoice API 测试脚本")
     print("=" * 30)
@@ -226,31 +314,32 @@ if __name__ == "__main__":
 
 毛泽东同志指出，“读书是学习，使用也是学习，而且是更重要的学习。”学习的目的全在于运用。只有坚持学以致用、用以促学、学用相长，把学习党的十八大报告和党章同研究解决本地区本部门经济社会发展中的重大问题结合起来，同研究解决影响人民幸福的利益问题结合起来，同研究解决党的建设中存在的突出问题结合起来，才能真正把学习党的十八大精神的收获转化为领导科学发展的实际本领、工作思路和良好作风。然而，反观时下，有些地方，少数同志，在学和用的问题上不能很好地统一起来，平时常常借口工作忙、事务繁，不学习或很少学习，即便学习也是蜻蜓点水、浮光掠影，浅尝辄止、一知半解。在他们看来，文件翻过、课程听过，就算完成“任务”了。对学习的目的不明确、不清楚，与实际脱节，不能做到学以致用、用以促学、学用相长。这种学习，是一种形而上学，是必须要克服和杜绝的。    在《唐顿庄园》中，唐顿在游戏中使用“唐顿庄园”作为游戏名称，这是在游戏中使用“唐顿庄园”作为游戏名称的例子。
     """
-    #打印时间
-    start_time = time.time()
-    # 长文本 测试
     payload = {"query": long_text, "speaker": "中文女", "speed": "1", "isStream": "True"}
-    test_stream_sft_json(payload)
+    #用时计算
+    start_time = time.time()
+    # test_stream_sft_json(payload)
+    def text_generator():
+        yield '收到好友从远方寄来的生日礼物，'
+        yield '那份意外的惊喜与深深的祝福'
+        yield '让我心中充满了甜蜜的快乐，'
+        yield '笑容如花儿般绽放。'
+    # for i, j in enumerate(cosyvoice.inference_zero_shot(text_generator(), '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+
+    #     torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+    # 打印迭代器的内容
+    print(list(text_generator()))
+    print(text_generator())
+
     end_time = time.time()
     print("长文本用时：", end_time - start_time)
     
     
-    # 双流测试
-    start_time = time.time()
-    # 分词器分词
-    import jieba
-    text_list = jieba.lcut(long_text)
-    
-    
-    
-    print(text_list)
-    payload = {"query": long_text, "speaker": "中文女", "speed": "1", "isStream": "True"}
-    test_stream_sft_json(payload)
-    
     print()
     
-    time.sleep(1)
+    # time.sleep(1)
     
+    # 测试使用分词器的流式处理
+    # test_tokenized_stream_sft()
     
     # test_stream_sft_json1()
     # print()
